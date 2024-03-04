@@ -49,33 +49,70 @@ export async function exportPubKey(key: webcrypto.CryptoKey): Promise<string> {
 }
 
 // Export a crypto private key to a base64 string format
-export async function exportPrvKey(
-  key: webcrypto.CryptoKey | null
-): Promise<string | null> {
-  // TODO implement this function to return a base64 string version of a private key
+export async function exportPrvKey(key: webcrypto.CryptoKey | null): Promise<string | null> {
+  if (!key) {
+    return null;
+  }
 
-  // remove this
-  return "";
+  try {
+    const exportedKey = await webcrypto.subtle.exportKey("pkcs8", key);
+    const base64Key = arrayBufferToBase64(exportedKey);
+    return base64Key;
+  } catch (error) {
+    console.error("Error exporting private key:", error);
+    return null;
+  }
 }
 
 // Import a base64 string public key to its native format
 export async function importPubKey(
   strKey: string
 ): Promise<webcrypto.CryptoKey> {
-  // TODO implement this function to go back from the result of the exportPubKey function to it's native crypto key object
+  try {
+  
+    const keyBuffer = base64ToArrayBuffer(strKey);
+    
+    const publicKey = await webcrypto.subtle.importKey(
+      "spki",
+      keyBuffer,
+      {
+        name: "RSA-OAEP",
+        hash: "SHA-256",
+      },
+      true,
+      ["encrypt"]
+    );
 
-  // remove this
-  return {} as any;
+    return publicKey;
+  } catch (error) {
+    console.error("Error importing public key:", error);
+    throw error;
+  }
 }
 
 // Import a base64 string private key to its native format
 export async function importPrvKey(
   strKey: string
 ): Promise<webcrypto.CryptoKey> {
-  // TODO implement this function to go back from the result of the exportPrvKey function to it's native crypto key object
+  try {
+    const keyBuffer = base64ToArrayBuffer(strKey);
+    
+    const privateKey = await webcrypto.subtle.importKey(
+      "pkcs8",
+      keyBuffer,
+      {
+        name: "RSA-OAEP",
+        hash: "SHA-256",
+      },
+      true,
+      ["decrypt"]
+    );
 
-  // remove this
-  return {} as any;
+    return privateKey;
+  } catch (error) {
+    console.error("Error importing private key:", error);
+    throw error;
+  }
 }
 
 // Encrypt a message using an RSA public key
@@ -83,11 +120,27 @@ export async function rsaEncrypt(
   b64Data: string,
   strPublicKey: string
 ): Promise<string> {
-  // TODO implement this function to encrypt a base64 encoded message with a public key
-  // tip: use the provided base64ToArrayBuffer function
+  try {
+ 
 
-  // remove this
-  return "";
+  const data = new TextEncoder().encode(b64Data);
+    
+   const publicKey = await importPubKey(strPublicKey);
+  const encryptedData = await webcrypto.subtle.encrypt(
+      {
+        name: "RSA-OAEP",
+      },
+      publicKey,
+      data
+    );
+    const encryptedBase64 = arrayBufferToBase64(encryptedData);
+
+    return encryptedBase64;
+  } catch (error) {
+    console.error("Error encrypting message:", error);
+    throw error;
+  
+}
 }
 
 // Decrypts a message using an RSA private key
@@ -95,11 +148,25 @@ export async function rsaDecrypt(
   data: string,
   privateKey: webcrypto.CryptoKey
 ): Promise<string> {
-  // TODO implement this function to decrypt a base64 encoded message with a private key
-  // tip: use the provided base64ToArrayBuffer function
+  try {
+  
+    const dataBuffer = base64ToArrayBuffer(data);
+    
+    const decryptedData = await webcrypto.subtle.decrypt(
+      {
+        name: "RSA-OAEP",
+      },
+      privateKey,
+      dataBuffer
+    );
 
-  // remove this
-  return "";
+    const decryptedString = new TextDecoder().decode(decryptedData);
+
+    return decryptedString;
+  } catch (error) {
+    console.error("Error decrypting message:", error);
+    throw error;
+  }
 }
 
 // ######################
@@ -108,30 +175,59 @@ export async function rsaDecrypt(
 
 // Generates a random symmetric key
 export async function createRandomSymmetricKey(): Promise<webcrypto.CryptoKey> {
-  // TODO implement this function using the crypto package to generate a symmetric key.
-  //      the key should be used for both encryption and decryption. Make sure the
-  //      keys are extractable.
+  try {
+  
+    const key = await webcrypto.subtle.generateKey(
+      {
+        name: "AES-CBC",
+        length: 256, 
+      },
+      true, 
+      ["encrypt", "decrypt"] 
+    );
 
-  // remove this
-  return {} as any;
+    return key;
+  } catch (error) {
+    console.error("Error generating symmetric key:", error);
+    throw error;
+  }
+
 }
 
 // Export a crypto symmetric key to a base64 string format
 export async function exportSymKey(key: webcrypto.CryptoKey): Promise<string> {
-  // TODO implement this function to return a base64 string version of a symmetric key
-
-  // remove this
-  return "";
+  try {
+    const exportedKey = await webcrypto.subtle.exportKey("raw", key);
+    const base64Key = arrayBufferToBase64(exportedKey);
+    return base64Key;
+  } catch (error) {
+    console.error("Error exporting symmetric key:", error);
+    throw error;
+  }
 }
 
 // Import a base64 string format to its crypto native format
 export async function importSymKey(
   strKey: string
 ): Promise<webcrypto.CryptoKey> {
-  // TODO implement this function to go back from the result of the exportSymKey function to it's native crypto key object
+  try {
 
-  // remove this
-  return {} as any;
+    const keyBuffer = base64ToArrayBuffer(strKey);
+    
+   
+    const importedKey = await webcrypto.subtle.importKey(
+      "raw",
+      keyBuffer,
+      { name: "AES-CBC" }, 
+      true, 
+      ["encrypt", "decrypt"] 
+    );
+
+    return importedKey;
+  } catch (error) {
+    console.error("Error importing symmetric key:", error);
+    throw error;
+  }
 }
 
 // Encrypt a message using a symmetric key
@@ -139,10 +235,29 @@ export async function symEncrypt(
   key: webcrypto.CryptoKey,
   data: string
 ): Promise<string> {
-  // TODO implement this function to encrypt a base64 encoded message with a public key
-  // tip: encode the data to a uin8array with TextEncoder
+  try {
+    const encodedData = new TextEncoder().encode(data);
+  
+    const iv = crypto.getRandomValues(new Uint8Array(16));
+    
+    const encryptedData = await webcrypto.subtle.encrypt(
+      {
+        name: "AES-CBC",
+        iv: iv,
+      },
+      key,
+      encodedData
+    );
+    const encryptedDataWithIV = new Uint8Array(iv.length + encryptedData.byteLength);
+    encryptedDataWithIV.set(iv);
+    encryptedDataWithIV.set(new Uint8Array(encryptedData), iv.length);
+    const encryptedBase64 = arrayBufferToBase64(encryptedDataWithIV);
 
-  return "";
+    return encryptedBase64;
+  } catch (error) {
+    console.error("Error encrypting message:", error);
+    throw error;
+  }
 }
 
 // Decrypt a message using a symmetric key
@@ -150,8 +265,27 @@ export async function symDecrypt(
   strKey: string,
   encryptedData: string
 ): Promise<string> {
-  // TODO implement this function to decrypt a base64 encoded message with a private key
-  // tip: use the provided base64ToArrayBuffer function and use TextDecode to go back to a string format
+  try {
+   
+    const key = await importSymKey(strKey); 
+    const encryptedDataBuffer = base64ToArrayBuffer(encryptedData);
 
-  return "";
+
+    const decryptedData = await webcrypto.subtle.decrypt(
+      {
+        name: "AES-CBC",
+        iv: encryptedDataBuffer.slice(0, 16), 
+      },
+      key,
+      encryptedDataBuffer.slice(16)
+    );
+
+    const decryptedString = new TextDecoder().decode(decryptedData);
+
+    return decryptedString;
+  } catch (error) {
+    console.error("Error decrypting message:", error);
+    throw error;
+  }
+
 }
