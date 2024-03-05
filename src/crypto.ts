@@ -50,10 +50,9 @@ export async function exportPubKey(key: webcrypto.CryptoKey): Promise<string> {
 
 // Export a crypto private key to a base64 string format
 export async function exportPrvKey(key: webcrypto.CryptoKey | null): Promise<string | null> {
-  if (!key) {
+  if (key === null) {
     return null;
   }
-
   try {
     const exportedKey = await webcrypto.subtle.exportKey("pkcs8", key);
     const base64Key = arrayBufferToBase64(exportedKey);
